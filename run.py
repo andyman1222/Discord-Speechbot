@@ -2,6 +2,7 @@ import discord
 import json
 import traceback
 from discord.ext import commands
+from discord.ext import tasks
 import re
 import random
 from random import randint
@@ -13,9 +14,12 @@ from urllib.parse import urlparse, parse_qs
 import ctypes, sys
 from threading import Thread
 import threading
+import queue
 from socketserver import ThreadingMixIn
 import socket
 import copy
+import time
+import asyncio
 
 def is_admin():
     try:
@@ -254,8 +258,18 @@ async def on_ready():
 
 commandsList = ["$help", "$speak", "$randomspeak", "$randomspeaknonsense", "$speaknonsense", "$clear", "$check", "$sentencesearch", "$wordcount", "$channelstats", "$userstats", "$generateword", "$generatenonsenseword", "$randomword", "$randomnonsenseword"]
 
+msgQueue = queue.Queue()
+
+
+
+
 @bot.event
 async def on_message(message):
+    msgQueue.put_nowait(message)
+    #print("Message logged")
+
+
+async def handleMessageQueue(message):
     if message.author.bot:
         return
     graphData = generateGraph(message)
@@ -994,13 +1008,25 @@ def serve(ip):
     webServer = ThreadingHTTPServer((ip, serverPort), Handler)
     webServer.serve_forever()
 
+@tasks.loop(seconds=.1)
+async def msgQueueThread():
+    #while True:
+    if(not msgQueue.empty()):
+        #print("handling message")
+        await handleMessageQueue(msgQueue.get())
+    #else:
+    #    time.sleep(.1)
+
 if __name__ == "__main__":        
     
     t1=Thread(target=serve,args=['0.0.0.0']).start()
+    #t2=Thread(target=msgQueueThread).start()
     #t2=Thread(target=serve,args=['::']).start()
     try:
         token = open("key.txt", "r").read()
+        msgQueueThread.start()
         bot.run(token)
+        
         
     except KeyboardInterrupt:
         pass

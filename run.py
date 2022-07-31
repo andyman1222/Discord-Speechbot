@@ -272,29 +272,33 @@ async def on_message(message):
 
 
 async def handleMessageQueue(message):
-	global cmdPrefix
+	global commandsList
 	if message.author.bot:
 		return
-	graphData = generateGraph(message)
-	graph = graphData[0]
-	wordGraph = graphData[1]
-	author = graphData[2]
-
-	channelId = hex(message.channel.id)
-	authorId = hex(message.author.id)
-	msgId = hex(message.id)
-	guildId = hex(message.guild.id)
-
-	i = 0
-
 	# removed anything that would be surrounding bodies of text, as this would complicate things later. Note: didn't remove *, _, ||, or <> to either make things more interesting
 	words = message.clean_content.replace('\n', " \n ").replace("! ", "! \n ").replace(
 		"? ", "? \n ").replace("; ", "; \n ").replace('\"', " \" ").split(' ')
 	l = len(words) - 1
-	#print(words[0] not in commandsList)
-	if(words[0] in commandsList):
+	if words[0] in commandsList:
+		#print("Processing command")
 		await bot.process_commands(message)
 	else:
+		#print("Message: " + words)
+		graphData = generateGraph(message)
+		graph = graphData[0]
+		wordGraph = graphData[1]
+		author = graphData[2]
+
+		channelId = hex(message.channel.id)
+		authorId = hex(message.author.id)
+		msgId = hex(message.id)
+		guildId = hex(message.guild.id)
+
+		i = 0
+
+		
+		#print("'" + words[0] + "' " + str(words[0] in commandsList))
+		
 		while i < l:
 			if not (words[i] is None):
 				if words[i].lower() == '\n':
@@ -376,8 +380,8 @@ async def handleMessageQueue(message):
 				else:
 					word = ""
 			saveFile(guildId, graph, wordGraph, author)
-	#dataLock.release()
-	await bot.change_presence(activity=discord.Streaming(url="http://quantonium.net", name="" + str(os.path.getsize('graph.json')) + " bytes of sentence data"))
+		#dataLock.release()
+		await bot.change_presence(activity=discord.Streaming(url="http://quantonium.net", name="" + str(os.path.getsize('graph.json')) + " bytes of sentence data"))
 	
 
 
@@ -562,12 +566,14 @@ async def speak(ctx, *args):
 			sentence += args[i] + " "
 			prevWord = args[i]
 			i += 1
-		sentence = sentence + start + " " + findWeightedValue(prevWord, start, graph, ctx, True, True, " ", len(sentence + start + " "))
-		graph['L']['S'] = sentence.replace("\n", "")
-		if len(sentence.replace("\n", "")) == 0:
+		newSentence = findWeightedValue(prevWord, start, graph, ctx, True, True, " ", len(sentence + start + " "))
+		if len(newSentence.replace("\n", "")) == 0:
 			raise WordDoesntExist
-		saveFile(hex(ctx.guild.id), graph, wordGraph, author)
-		await ctx.send(sentence.replace("\n", ""))
+		else:
+			sentence = sentence + start + " " + newSentence
+			graph['L']['S'] = sentence.replace("\n", "")
+			saveFile(hex(ctx.guild.id), graph, wordGraph, author) #will only save on success
+			await ctx.send(sentence.replace("\n", ""))
 	except WordDoesntExist:
 		await ctx.send("Gee... I've never heard of that word or combination of words before.\n(I look back 2 words in order to make my sentences the most gramatically correct as possible, so I might not know how to continue off your sentence.)")
 		
@@ -602,8 +608,8 @@ async def check(ctx, *args):
 			prevWord = args[i]
 			i += 1
 		argsString = sentence + args[i]
-		sentence = sentence + " " + start + " " + findWeightedValue(prevWord, start, graph, ctx, False, False, " ", len(sentence + start + " "))
-		if len(sentence.replace("\n", "")) == 0:
+		newSentence = findWeightedValue(prevWord, start, graph, ctx, False, False, " ", len(sentence + start + " "))
+		if len(newSentence.replace("\n", "")) == 0:
 			raise WordDoesntExist
 		await ctx.send("I have seen that word/combination of words! Feel free to use it with `$speak " + argsString + "`.")
 	except WordDoesntExist:
@@ -710,12 +716,14 @@ async def speaknonsense(ctx, *args):
 		while i < len(args)-1:
 			sentence += args[i] + " "
 			i += 1
-		sentence = sentence + start + " " + findWeightedValue2(start, graph, ctx, True, True, " ", len(sentence + start + " "))
-		if len(sentence.replace("\n", "")) == 0:
+		newSentence = findWeightedValue2(start, graph, ctx, True, True, " ", len(sentence + start + " "))
+		if len(newSentence.replace("\n", "")) == 0:
 			raise WordDoesntExist
-		graph['L']['S'] = sentence.replace("\n", "")
-		saveFile(hex(ctx.guild.id), graph, wordGraph, author)
-		await ctx.send(sentence.replace("\n", ""))
+		else:
+			sentence = sentence + start + " " + newSentence
+			graph['L']['S'] = sentence.replace("\n", "")
+			saveFile(hex(ctx.guild.id), graph, wordGraph, author)
+			await ctx.send(sentence.replace("\n", ""))
 	except WordDoesntExist:
 		await ctx.send("Gee... I've never heard of that word or combination of words before.\n(I look back 2 words in order to make my sentences the most gramatically correct as possible, so I might not know how to continue off your sentence.)")
 		
@@ -819,6 +827,8 @@ async def sentencesearch(ctx, *args):
 			continue
 	if (finalOut is not None and len(finalOut) > 0):
 		await ctx.send(finalOut)
+	else:
+		await ctx.send("Uh oh! It seems I have messed up, and cannot find the origin of the sentence!")
 	#dataLock.release()
 
 

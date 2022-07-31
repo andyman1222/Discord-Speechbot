@@ -857,14 +857,17 @@ async def generateword(ctx, *args):
 			raise badLength
 		else:
 			length = length-len(word)
+		newWord = ""
 		while True:
-			word = word + findWeightedValue(prevLtr, start, wordGraph, ctx, False, False, "", len(word))
+			newWord = newWord + findWeightedValue(prevLtr, start, wordGraph, ctx, False, False, "", len(word))
 			length -= 1
 			if length < 0:
 				break
-		if len(word.replace(" ;", "")) == 0:
+		if len(newWord.replace(" ;", "")) == 0:
 			raise WordDoesntExist
-		await ctx.send(word.replace(" ;", ""))
+		else:
+			word = word + newWord
+			await ctx.send(word.replace(" ;", ""))
 	except WordDoesntExist:
 		await ctx.send("Gee... I've never seen that character(s) before! Be sure you are using a-z and I have seen them on this server before.")
 		
@@ -945,14 +948,17 @@ async def generatenonsenseword(ctx, *args):
 			raise badLength
 		else:
 			length = length-len(word)
+		newWord = ""
 		while True:
-			word = word + start + findWeightedValue2(start, wordGraph, ctx, False, False, "", len(word + start))
+			newWord = newWord + findWeightedValue2(start, wordGraph, ctx, False, False, "", len(word + start))
 			length -= 1
 			if length < 0:
 				break
-		if len(word.replace(" ;", "")) == 0:
+		if len(newWord.replace(" ;", "")) == 0:
 			raise WordDoesntExist
-		await ctx.send(word.replace(" ;", ""))
+		else:
+			word = word + start + newWord
+			await ctx.send(word.replace(" ;", ""))
 	except WordDoesntExist:
 		await ctx.send("Gee... I've never seen that character(s) before! Be sure you are using a-z and I have seen them on this server before.")
 		
